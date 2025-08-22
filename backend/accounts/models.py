@@ -14,6 +14,7 @@ class Organization(models.Model):
 
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
+    # "TODO: enforce organization requirement for user signup once registration is implemented
     organization = models.ForeignKey(
         Organization, on_delete=models.DO_NOTHING, null=True, blank=True, related_name="users"
     )

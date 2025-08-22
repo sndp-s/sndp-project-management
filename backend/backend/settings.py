@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import Config, RepositoryEnv, Csv
+import datetime
 
 
 config = Config(RepositoryEnv('../.backend.env'))
@@ -138,5 +139,22 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Graphene
 GRAPHENE = {
-    "SCHEMA": "project_management.schema.schema"
+    "SCHEMA": "project_management.schema.schema",
+    "MIDDLEWARE": [
+        "graphql_jwt.middleware.JSONWebTokenMiddleware",
+    ],
+}
+
+
+AUTHENTICATION_BACKENDS = [
+    "graphql_jwt.backends.JSONWebTokenBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+
+GRAPHQL_JWT = {
+    "JWT_AUTH_HEADER_PREFIX": "Bearer",
+    "JWT_VERIFY_EXPIRATION": True,
+    "JWT_EXPIRATION_DELTA": datetime.timedelta(minutes=30),
+    "JWT_REFRESH_EXPIRATION_DELTA": datetime.timedelta(days=7),
 }

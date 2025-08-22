@@ -1,11 +1,10 @@
 import graphene
+from accounts.schema import AccountsQuery, AccountsMutation
 
+class Query(AccountsQuery, graphene.ObjectType):
+    pass
 
-class Query(graphene.ObjectType):
-    hello = graphene.String(description="Hello World!")
+class Mutation(AccountsMutation, graphene.ObjectType):
+    pass
 
-    def resolve_hello(root, info):
-        return "Hello, world!"
-
-
-schema = graphene.Schema(query=Query)
+schema = graphene.Schema(query=Query, mutation=Mutation)

@@ -139,7 +139,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Graphene
 GRAPHENE = {
-    "SCHEMA": "project_management.schema.schema",
+    "SCHEMA": "backend.schema.schema",
     "MIDDLEWARE": [
         "graphql_jwt.middleware.JSONWebTokenMiddleware",
     ],

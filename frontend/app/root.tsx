@@ -6,6 +6,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { Toaster } from "~/components/ui/toaster";
 import { ApolloProvider } from "@apollo/client/react";
 import { client } from "~/lib/apollo";
 
@@ -37,6 +38,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <ScrollRestoration />
+        <Toaster />
         <Scripts />
       </body>
     </html>

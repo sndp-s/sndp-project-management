@@ -7,7 +7,7 @@ import {
   ScrollRestoration,
 } from "react-router";
 import { ApolloProvider } from "@apollo/client/react";
-import { client } from "~/apollo";
+import { client } from "~/lib/apollo";
 
 import type { Route } from "./+types/root";
 import "./app.css";

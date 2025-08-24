@@ -8,7 +8,7 @@ import {
 } from "react-router";
 import { Toaster } from "~/components/ui/toaster";
 import { ApolloProvider } from "@apollo/client/react";
-import { client } from "~/lib/apollo";
+import { authClient } from "~/lib/apollo";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -47,7 +47,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <ApolloProvider client={client}>
+    <ApolloProvider client={authClient}>
       <Outlet />
     </ApolloProvider>
   );

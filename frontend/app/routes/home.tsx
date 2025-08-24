@@ -1,9 +1,9 @@
 import { redirect } from "react-router";
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
 import type { LoaderFunctionArgs } from "react-router";
 import { verify } from "~/lib/auth";
 import { AuthError, AuthErrorCode } from "~/lib/errors";
+import ProjectsPage from "./projects";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -41,6 +41,5 @@ export async function clientLoader({ }: LoaderFunctionArgs) {
 }
 
 export default function Home() {
-  // TODO: wire dashboard here
-  return <Welcome />;
+  return <ProjectsPage />
 }

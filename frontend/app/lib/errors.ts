@@ -14,3 +14,7 @@ export class AuthError extends Error {
     this.name = "AuthError";
   }
 }
+
+export type ProjectError =
+  | { type: "FETCH"; message: string }
+  | { type: "CREATE"; message: string };

@@ -2,6 +2,7 @@ import { gql } from "@apollo/client";
 import { publicClient } from "~/lib/apollo";
 import { CombinedGraphQLErrors, ServerError } from "@apollo/client/errors";
 import { AuthError, AuthErrorCode } from "~/lib/errors";
+import type { User } from "~/types/types.base";
 
 //
 // verify
@@ -48,6 +49,72 @@ export async function verify(token: string): Promise<VerifyPayload> {
       }
       throw new AuthError(
         AuthErrorCode.UNKNOWN,
+        err.errors.map((e) => e.message).join(", ")
+      );
+    }
+
+    if (ServerError.is(err)) {
+      throw new AuthError(AuthErrorCode.NETWORK, "Network or server error");
+    }
+
+    if (err instanceof Error) {
+      throw new AuthError(AuthErrorCode.UNKNOWN, err.message);
+    }
+
+    throw new AuthError(AuthErrorCode.UNKNOWN, "Unknown error");
+  }
+}
+
+//
+// login
+//
+const LOGIN = gql`
+  mutation Login($email: String!, $password: String!) {
+    tokenAuth(email: $email, password: $password) {
+      token
+      user {
+        id
+        email
+        organization {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+
+interface LoginPayload {
+  token: string;
+  user: User;
+}
+interface LoginResult {
+  tokenAuth: LoginPayload;
+}
+
+export async function login(
+  email: string,
+  password: string
+): Promise<LoginPayload> {
+  try {
+    const { data } = await publicClient.mutate<LoginResult>({
+      mutation: LOGIN,
+      variables: { email, password },
+      errorPolicy: "none",
+    });
+
+    if (!data?.tokenAuth?.token) {
+      throw new AuthError(AuthErrorCode.UNKNOWN, "No token returned");
+    }
+
+    // Save token for future requests
+    localStorage.setItem("token", data.tokenAuth.token);
+
+    return data.tokenAuth;
+  } catch (err: unknown) {
+    if (CombinedGraphQLErrors.is(err)) {
+      throw new AuthError(
+        AuthErrorCode.INVALID,
         err.errors.map((e) => e.message).join(", ")
       );
     }

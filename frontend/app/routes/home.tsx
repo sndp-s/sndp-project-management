@@ -2,6 +2,8 @@ import { redirect } from "react-router";
 import type { Route } from "./+types/home";
 import { Welcome } from "../welcome/welcome";
 import type { LoaderFunctionArgs } from "react-router";
+import { verify } from "~/lib/auth";
+import { AuthError, AuthErrorCode } from "~/lib/errors";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -13,10 +15,27 @@ export function meta({ }: Route.MetaArgs) {
 export async function clientLoader({ }: LoaderFunctionArgs) {
   const token = localStorage.getItem("token");
 
-  // TODO: verify token
-
   if (!token) {
     throw redirect("/login");
+  }
+
+  try {
+    await verify(token)
+  } catch (err) {
+    if (err instanceof AuthError) {
+      if (
+        err.code === AuthErrorCode.EXPIRED ||
+        err.code === AuthErrorCode.INVALID
+      ) {
+        localStorage.removeItem("token");
+        throw redirect("/login");
+      } else if (
+        err.code === AuthErrorCode.UNKNOWN ||
+        err.code === AuthErrorCode.NETWORK
+      ) {
+        throw redirect("/network-error");
+      }
+    }
   }
   return null;
 }

@@ -1,8 +1,11 @@
 import { gql } from "@apollo/client";
-import { client } from "~/lib/apollo";
+import { publicClient } from "~/lib/apollo";
 import { CombinedGraphQLErrors, ServerError } from "@apollo/client/errors";
 import { AuthError, AuthErrorCode } from "~/lib/errors";
 
+//
+// verify
+//
 const VERIFY = gql`
   mutation verifyToken($token: String!) {
     verifyToken(token: $token) {
@@ -11,33 +14,29 @@ const VERIFY = gql`
   }
 `;
 
-interface Payload {
+interface VerifyPayload {
   email: string;
   exp: number;
   origIat: number;
 }
-
 interface VerifyResult {
   verifyToken: {
-    payload: Payload;
+    payload: VerifyPayload;
   };
 }
 
-export async function verify(token: string): Promise<Payload> {
+export async function verify(token: string): Promise<VerifyPayload> {
   try {
-    const { data } = await client.mutate<VerifyResult>({
+    const { data } = await publicClient.mutate<VerifyResult>({
       mutation: VERIFY,
       variables: { token },
       errorPolicy: "none",
     });
-    debugger;
     if (!data?.verifyToken?.payload) {
       throw new AuthError(AuthErrorCode.UNKNOWN, "No payload returned");
     }
-
     return data.verifyToken.payload;
   } catch (err: unknown) {
-    debugger;
     if (CombinedGraphQLErrors.is(err)) {
       for (const gqlErr of err.errors) {
         if (gqlErr.message.includes("Signature has expired")) {

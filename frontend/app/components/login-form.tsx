@@ -11,7 +11,7 @@ import {
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
 import { toast } from "sonner";
-import { useAuth } from "~/hooks/useAuth";
+import { login } from "~/lib/auth";
 import { useNavigate } from "react-router";
 
 export function LoginForm({
@@ -21,7 +21,6 @@ export function LoginForm({
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth();
   let navigate = useNavigate();
 
 

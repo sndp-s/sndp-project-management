@@ -5,6 +5,7 @@ import {
   HttpLink,
 } from "@apollo/client";
 import { ErrorLink } from "@apollo/client/link/error";
+import { Observable } from "@apollo/client/utilities";
 import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
@@ -15,26 +16,105 @@ const API_URL = import.meta.env.VITE_API_URL as string;
 const httpLink = new HttpLink({ uri: API_URL });
 
 // Error handling link
+const REFRESH_MUTATION = `mutation RefreshToken($refreshToken: String!) { refreshToken(refreshToken: $refreshToken) { token refreshToken refreshExpiresIn } }`;
+
+async function requestTokenRefresh(
+  refreshToken: string
+): Promise<{ token: string | null; refreshToken: string | null }> {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: REFRESH_MUTATION,
+      variables: { refreshToken },
+    }),
+  });
+  const json = await res.json();
+  return {
+    token: json?.data?.refreshToken?.token ?? null,
+    refreshToken: json?.data?.refreshToken?.refreshToken ?? null,
+  };
+}
+
 const errorLink = new ErrorLink(({ error, operation, forward }) => {
   if (CombinedGraphQLErrors.is(error)) {
-    // GraphQL errors (resolver or validation errors)
-    error.errors.forEach(({ message, extensions }) => {
-      console.error(`[GraphQL error]: ${message}`, extensions);
+    const messages = error.errors.map((e) => (e.message || "").toLowerCase());
+    const codes = error.errors.map((e) =>
+      (e.extensions?.code || "").toString()
+    );
+    const tokenExpired = messages.some((m) =>
+      m.includes("signature has expired")
+    );
+    const invalidToken = messages.some((m) => m.includes("invalid token"));
+    const isUnauthenticated = codes.some((c) => c === "UNAUTHENTICATED");
+    if (!(tokenExpired || invalidToken || isUnauthenticated)) return;
+    const currentRefresh = localStorage.getItem("refreshToken");
+    if (!currentRefresh) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      if (typeof window !== "undefined") window.location.assign("/login");
+      return;
+    }
 
-      if (extensions?.code === "UNAUTHENTICATED") {
-        // TODO: Handle token refresh here
-        // return forward(operation) if retrying
-      }
+    return new Observable((observer) => {
+      requestTokenRefresh(currentRefresh)
+        .then(
+          ({
+            token,
+            refreshToken,
+          }: {
+            token: string | null;
+            refreshToken: string | null;
+          }) => {
+            if (token) {
+              localStorage.setItem("token", token);
+              if (refreshToken)
+                localStorage.setItem("refreshToken", refreshToken);
+              operation.setContext(({ headers = {} }) => ({
+                headers: {
+                  ...headers,
+                  Authorization: `Bearer ${token}`,
+                },
+                _retry: true,
+              }));
+            } else {
+              console.error("Token refresh returned no token");
+              localStorage.removeItem("token");
+              localStorage.removeItem("refreshToken");
+              if (typeof window !== "undefined") {
+                window.location.assign("/login");
+              }
+            }
+
+            const subscriber = forward(operation).subscribe({
+              next: (result) => observer.next(result),
+              error: (err) => observer.error(err),
+              complete: () => observer.complete(),
+            });
+
+            return () => subscriber.unsubscribe();
+          }
+        )
+        .catch((err) => {
+          console.error("Token refresh failed", err);
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+          if (typeof window !== "undefined") {
+            window.location.assign("/login");
+          }
+          observer.error(err);
+        });
     });
-  } else if (CombinedProtocolErrors.is(error)) {
-    // Protocol-level issues (e.g., invalid responses)
+  }
+
+  if (CombinedProtocolErrors.is(error)) {
     error.errors.forEach(({ message, extensions }) => {
       console.error(`[Protocol error]: ${message}`, extensions);
     });
-  } else {
-    // Network-level issue (server unreachable, CORS, etc.)
-    console.error(`[Network error]:`, error);
+    return;
   }
+
+  console.error(`[Network error]:`, error);
 });
 
 // Auth link

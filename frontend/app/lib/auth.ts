@@ -72,6 +72,7 @@ const LOGIN = gql`
   mutation Login($email: String!, $password: String!) {
     tokenAuth(email: $email, password: $password) {
       token
+      refreshToken
       user {
         id
         email
@@ -86,6 +87,7 @@ const LOGIN = gql`
 
 interface LoginPayload {
   token: string;
+  refreshToken?: string | null;
   user: User;
 }
 interface LoginResult {
@@ -107,8 +109,11 @@ export async function login(
       throw new AuthError(AuthErrorCode.UNKNOWN, "No token returned");
     }
 
-    // Save token for future requests
+    // Save token(s) for future requests
     localStorage.setItem("token", data.tokenAuth.token);
+    if (data.tokenAuth.refreshToken) {
+      localStorage.setItem("refreshToken", data.tokenAuth.refreshToken);
+    }
 
     return data.tokenAuth;
   } catch (err: unknown) {

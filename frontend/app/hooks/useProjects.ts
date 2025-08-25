@@ -2,6 +2,7 @@ import { gql } from "@apollo/client";
 import { useMutation, useQuery } from "@apollo/client/react";
 import type { ProjectError } from "~/lib/errors";
 import type { Project } from "~/types/types.projects";
+import { toast } from "sonner";
 
 const GET_PROJECTS = gql`
   query GET_PROJECTS {
@@ -105,15 +106,20 @@ export function useProjects() {
       status: "ACTIVE",
     };
 
-    await createMutation({
-      variables: { name, description },
-      optimisticResponse: {
-        createProject: {
-          __typename: "CreateProject",
-          project: { __typename: "Project", ...optimistic },
+    try {
+      await createMutation({
+        variables: { name, description },
+        optimisticResponse: {
+          createProject: {
+            __typename: "CreateProject",
+            project: { __typename: "Project", ...optimistic },
+          },
         },
-      },
-    });
+      });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to create project");
+      throw err;
+    }
   };
 
   const updateProject = async (
@@ -122,15 +128,20 @@ export function useProjects() {
   ) => {
     const current = data?.projects.find((p) => p.id === id);
     const optimistic = current ? { ...current, ...patch } : { id, ...patch };
-    await updateMutation({
-      variables: { id, ...patch },
-      optimisticResponse: {
-        updateProject: {
-          __typename: "UpdateProject",
-          project: { __typename: "Project", ...optimistic },
+    try {
+      await updateMutation({
+        variables: { id, ...patch },
+        optimisticResponse: {
+          updateProject: {
+            __typename: "UpdateProject",
+            project: { __typename: "Project", ...optimistic },
+          },
         },
-      },
-    });
+      });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to update project");
+      throw err;
+    }
   };
 
   return {

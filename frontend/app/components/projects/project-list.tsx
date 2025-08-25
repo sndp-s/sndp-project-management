@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
@@ -23,6 +24,7 @@ export function ProjectList({
   if (!projects.length) return <p>No projects yet.</p>;
 
   const statusOptions = useMemo(() => DEFAULT_STATUS_OPTIONS, []);
+  const navigate = useNavigate();
 
   const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
   const [descDrafts, setDescDrafts] = useState<Record<string, string>>({});
@@ -89,6 +91,9 @@ export function ProjectList({
                     disabled={!changed || saving[p.id]}
                   >
                     {saving[p.id] ? "Saving..." : "Save"}
+                  </Button>
+                  <Button variant="secondary" onClick={() => navigate(`/projects/${p.id}`)}>
+                    Open
                   </Button>
                 </div>
               </div>

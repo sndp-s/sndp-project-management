@@ -13,6 +13,7 @@ const GET_TASKS = gql`
       dueDate
       createdAt
       assignee { id email isActive }
+      comments { id content author { id email } createdAt }
     }
   }
 `;

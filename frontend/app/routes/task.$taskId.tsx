@@ -7,6 +7,7 @@ import { Input } from "~/components/ui/input";
 import { useEffect, useState } from "react";
 import { useTasks } from "~/hooks/useTasks";
 import { toast } from "sonner";
+import { useTaskComments } from "~/hooks/useTaskComments";
 
 const GET_TASK = gql`
   query GET_TASK($id: ID!) {
@@ -19,6 +20,7 @@ const GET_TASK = gql`
       createdAt
       assignee { id email isActive }
       project { id name }
+      comments { id content createdAt author { id email } }
     }
   }
 `;
@@ -36,6 +38,7 @@ export default function TaskDetailsPage() {
   });
 
   const task = data?.task;
+  const { comments, addComment, updateComment } = useTaskComments(taskId);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -79,28 +82,87 @@ export default function TaskDetailsPage() {
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-600">{String(error)}</p>}
       {task && (
-        <Card className="p-4 space-y-3">
-          <div className="text-sm text-muted-foreground">Project: {task.project?.name}</div>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
-          <div className="flex items-center gap-2">
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 py-1 text-sm">
-              <option value="TODO">TODO</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="DONE">DONE</option>
-            </select>
-            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </div>
-          <Input value={assigneeEmail} onChange={(e) => setAssigneeEmail(e.target.value)} placeholder="Assignee email" />
-          {task.createdAt && (
-            <div className="text-xs text-muted-foreground">Created: {new Date(task.createdAt).toLocaleString()}</div>
-          )}
-          <div>
-            <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
-          </div>
-        </Card>
+        <>
+          <Card className="p-4 space-y-3">
+            <div className="text-sm text-muted-foreground">Project: {task.project?.name}</div>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
+            <div className="flex items-center gap-2">
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 py-1 text-sm">
+                <option value="TODO">TODO</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="DONE">DONE</option>
+              </select>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+            <Input value={assigneeEmail} onChange={(e) => setAssigneeEmail(e.target.value)} placeholder="Assignee email" />
+            {task.createdAt && (
+              <div className="text-xs text-muted-foreground">Created: {new Date(task.createdAt).toLocaleString()}</div>
+            )}
+            <div>
+              <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+            </div>
+          </Card>
+
+          <CommentsSection comments={comments} onAdd={addComment} onEdit={updateComment} />
+        </>
       )}
     </div>
+  );
+}
+
+function CommentsSection({ comments, onAdd, onEdit }: { comments: any[]; onAdd: (content: string) => Promise<void>; onEdit: (id: string, content: string) => Promise<void> }) {
+  const [draft, setDraft] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [editDrafts, setEditDrafts] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<Record<string, boolean>>({});
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft.trim()) return;
+    setAdding(true);
+    try {
+      await onAdd(draft.trim());
+      setDraft("");
+    } catch {}
+    setAdding(false);
+  };
+
+  const handleEdit = async (id: string) => {
+    const content = (editDrafts[id] ?? "").trim();
+    if (!content) return;
+    setSaving((s) => ({ ...s, [id]: true }));
+    try {
+      await onEdit(id, content);
+    } catch {}
+    setSaving((s) => ({ ...s, [id]: false }));
+  };
+
+  return (
+    <Card className="p-4 space-y-3">
+      <h3 className="text-lg font-medium">Comments</h3>
+      <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2">
+        <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a comment" />
+        <Button type="submit" disabled={adding}>{adding ? "Adding..." : "Add"}</Button>
+      </form>
+      <div className="space-y-2">
+        {comments.map((c) => (
+          <div key={c.id} className="flex flex-col gap-2 border rounded p-3">
+            <div className="text-xs text-muted-foreground">
+              <span>{c.author?.email ?? "Unknown"}</span>
+              <span className="ml-2">{new Date(c.createdAt).toLocaleString()}</span>
+            </div>
+            <Input
+              value={editDrafts[c.id] ?? c.content}
+              onChange={(e) => setEditDrafts((prev) => ({ ...prev, [c.id]: e.target.value }))}
+            />
+            <div>
+              <Button onClick={() => handleEdit(c.id)} disabled={saving[c.id]}>{saving[c.id] ? "Saving..." : "Save"}</Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 

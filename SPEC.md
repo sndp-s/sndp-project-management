@@ -81,31 +81,31 @@ Example models - expand as needed
 
 ```python
 class Organization(models.Model):
-name = models.CharField(max_length=100)
-slug = models.SlugField(unique=True)
-contact_email = models.EmailField()
-created_at = models.DateTimeField(auto_now_add=True)
+   name = models.CharField(max_length=100)
+   slug = models.SlugField(unique=True)
+   contact_email = models.EmailField()
+   created_at = models.DateTimeField(auto_now_add=True)
 ```
 
 ```python
 class Project(models.Model):
-organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
-name = models.CharField(max_length=200)
-description = models.TextField(blank=True)
-status = models.CharField(max_length=20, choices=STATUS_CHOICES)
-due_date = models.DateField(null=True, blank=True)
-created_at = models.DateTimeField(auto_now_add=True)
+   organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
+   name = models.CharField(max_length=200)
+   description = models.TextField(blank=True)
+   status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+   due_date = models.DateField(null=True, blank=True)
+   created_at = models.DateTimeField(auto_now_add=True)
 ```
 
 ```python
 class Task(models.Model):
-project = models.ForeignKey(Project, on_delete=models.CASCADE)
-title = models.CharField(max_length=200)
-description = models.TextField(blank=True)
-status = models.CharField(max_length=20, choices=TASK_STATUS_CHOICES)
-assignee_email = models.EmailField(blank=True)
-due_date = models.DateTimeField(null=True, blank=True)
-created_at = models.DateTimeField(auto_now_add=True)
+   project = models.ForeignKey(Project, on_delete=models.CASCADE)
+   title = models.CharField(max_length=200)
+   description = models.TextField(blank=True)
+   status = models.CharField(max_length=20, choices=TASK_STATUS_CHOICES)
+   assignee_email = models.EmailField(blank=True)
+   due_date = models.DateTimeField(null=True, blank=True)
+   created_at = models.DateTimeField(auto_now_add=True)
 ```
 
 ### **Frontend Component Examples**
@@ -113,24 +113,24 @@ created_at = models.DateTimeField(auto_now_add=True)
 Example interfaces
 ```javascript
 interface Project {  
-id: string;  
-name: string;  
-description: string;  
-status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD';  
-taskCount: number;  
-completedTasks: number;  
-dueDate?: string;  
+   id: string;  
+   name: string;  
+   description: string;  
+   status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD';  
+   taskCount: number;  
+   completedTasks: number;  
+   dueDate?: string;  
 }
 ```
 
 ```javascript
 interface Task {  
-id: string;  
-title: string;  
-description: string;  
-status: 'TODO' | 'IN_PROGRESS' | 'DONE';  
-assigneeEmail: string;  
-dueDate?: string;  
+   id: string;  
+   title: string;  
+   description: string;  
+   status: 'TODO' | 'IN_PROGRESS' | 'DONE';  
+   assigneeEmail: string;  
+   dueDate?: string;  
 }
 ```
 ### **Evaluation Criteria**

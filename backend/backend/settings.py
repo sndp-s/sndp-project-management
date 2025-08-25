@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'graphene_django',
+    'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
     'project_management',
     'accounts'
 ]
@@ -157,10 +158,15 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-
 GRAPHQL_JWT = {
     "JWT_AUTH_HEADER_PREFIX": "Bearer",
     "JWT_VERIFY_EXPIRATION": True,
-    "JWT_EXPIRATION_DELTA": datetime.timedelta(minutes=30),
-    "JWT_REFRESH_EXPIRATION_DELTA": datetime.timedelta(days=7),
+    "JWT_LONG_RUNNING_REFRESH_TOKEN": True,
+    "JWT_EXPIRATION_DELTA": datetime.timedelta(
+        minutes=config("JWT_ACCESS_TOKEN_EXPIRES_MINUTES",
+                       default=15, cast=int)
+    ),
+    "JWT_REFRESH_EXPIRATION_DELTA": datetime.timedelta(
+        days=config("JWT_REFRESH_TOKEN_EXPIRES_DAYS", default=7, cast=int)
+    ),
 }

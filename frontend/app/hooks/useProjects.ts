@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { authClient } from "~/lib/apollo";
 import { gql } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client/react";
 import type { ProjectError } from "~/lib/errors";
 import type { Project } from "~/types/types.projects";
 
@@ -28,72 +27,122 @@ const CREATE_PROJECT = gql`
   }
 `;
 
-export function useProjects() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ProjectError | null>(null);
+const UPDATE_PROJECT = gql`
+  mutation UpdateProject(
+    $id: ID!
+    $name: String
+    $description: String
+    $status: String
+  ) {
+    updateProject(
+      id: $id
+      name: $name
+      description: $description
+      status: $status
+    ) {
+      project {
+        id
+        name
+        description
+        status
+      }
+    }
+  }
+`;
 
-  // fetch projects
-  useEffect(() => {
-    authClient
-      .query<{ projects: (Project | null)[] }>({
+export function useProjects() {
+  const { data, loading, error } = useQuery<{ projects: Project[] }>(
+    GET_PROJECTS,
+    {
+      fetchPolicy: "cache-and-network",
+    }
+  );
+
+  const [createMutation] = useMutation(CREATE_PROJECT, {
+    update(cache, { data }) {
+      const created = data?.createProject?.project as Project | undefined;
+      if (!created) return;
+      const prev =
+        cache.readQuery<{ projects: Project[] }>({ query: GET_PROJECTS })
+          ?.projects ?? [];
+      cache.writeQuery({
         query: GET_PROJECTS,
-        fetchPolicy: "network-only",
-      })
-      .then((res) => {
-        const safeProjects = res.data?.projects
-          .filter((p): p is Project => p !== null)
-          .map((p) => ({
-            ...p,
-            description: p.description ?? "", // ensure description is string
-          }));
-        setProjects(safeProjects ?? []);
-      })
-      .catch((err) => {
-        setError({ type: "FETCH", message: "Failed to load projects" });
-        console.error(err);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+        data: {
+          projects: [
+            ...prev,
+            { ...created, description: created.description ?? "" },
+          ],
+        },
+      });
+    },
+  });
+
+  const [updateMutation] = useMutation(UPDATE_PROJECT, {
+    update(cache, { data }) {
+      const updated = data?.updateProject?.project as Project | undefined;
+      if (!updated) return;
+      const prev =
+        cache.readQuery<{ projects: Project[] }>({ query: GET_PROJECTS })
+          ?.projects ?? [];
+      cache.writeQuery({
+        query: GET_PROJECTS,
+        data: {
+          projects: prev.map((p) =>
+            p.id === updated.id
+              ? { ...updated, description: updated.description ?? "" }
+              : p
+          ),
+        },
+      });
+    },
+  });
 
   const createProject = async (name: string, description?: string) => {
-    const tempId = `temp-${Math.random()}`;
-    const tempProject: Project = {
-      id: tempId,
+    const optimistic: Project = {
+      id: `temp-${Math.random()}`,
       name,
-      description: description ?? "", // ensure string
-      status: "NEW",
+      description: description ?? "",
+      status: "ACTIVE",
     };
-    setProjects((prev) => [...prev, tempProject]);
 
-    try {
-      const { data } = await authClient.mutate<{
-        createProject: { project: Project };
-      }>({
-        mutation: CREATE_PROJECT,
-        variables: { name, description },
-      });
-
-      if (!data?.createProject?.project) throw new Error("No project returned");
-
-      const created = data.createProject.project;
-
-      // normalize undefined description
-      const finalProject: Project = {
-        ...created,
-        description: created.description ?? "",
-      };
-
-      // replace temp project with actual project
-      setProjects((prev) =>
-        prev.map((p) => (p.id === tempId ? finalProject : p))
-      );
-    } catch (err) {
-      setProjects((prev) => prev.filter((p) => p.id !== tempId));
-      setError({ type: "CREATE", message: "Failed to create project" });
-      throw err;
-    }
+    await createMutation({
+      variables: { name, description },
+      optimisticResponse: {
+        createProject: {
+          __typename: "CreateProject",
+          project: { __typename: "Project", ...optimistic },
+        },
+      },
+    });
   };
 
-  return { projects, loading, error, createProject };
+  const updateProject = async (
+    id: string,
+    patch: Partial<Pick<Project, "name" | "description" | "status">>
+  ) => {
+    const current = data?.projects.find((p) => p.id === id);
+    const optimistic = current ? { ...current, ...patch } : { id, ...patch };
+    await updateMutation({
+      variables: { id, ...patch },
+      optimisticResponse: {
+        updateProject: {
+          __typename: "UpdateProject",
+          project: { __typename: "Project", ...optimistic },
+        },
+      },
+    });
+  };
+
+  return {
+    projects: (data?.projects ?? []).map((p) => ({
+      ...p,
+      description: p.description ?? "",
+    })),
+    loading,
+    error: error
+      ? ({ type: "FETCH", message: "Failed to load projects" } as ProjectError)
+      : null,
+    createProject,
+    updateProject,
+  };
 }

@@ -18,7 +18,7 @@ class TaskType(DjangoObjectType):
     class Meta:
         model = Task
         fields = ("id", "title", "description", "status", "assignee",
-                  "due_date", "comments", "project")
+                  "due_date", "created_at", "comments", "project")
 
     comments = graphene.List(lambda: TaskCommentType)
     project = graphene.Field(lambda: ProjectType)

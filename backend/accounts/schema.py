@@ -3,6 +3,7 @@ import graphql_jwt
 from graphene_django import DjangoObjectType
 from django.contrib.auth import get_user_model, authenticate
 from graphql_jwt.shortcuts import get_token
+from graphql_jwt.shortcuts import create_refresh_token
 from accounts.models import Organization
 
 User = get_user_model()
@@ -38,8 +39,11 @@ class ObtainJSONWebTokenWithEmail(graphene.Mutation):
             raise Exception("User account is disabled")
 
         token = get_token(user)
+        # With long-running refresh tokens app installed, this returns a model instance
+        refresh = create_refresh_token(user)
+        refresh_token = str(getattr(refresh, "token", None) or refresh)
 
-        return cls(user=user, token=token)
+        return cls(user=user, token=token, refresh_token=refresh_token)
 
 
 # Query

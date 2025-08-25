@@ -37,8 +37,8 @@ class ProjectQuery(graphene.ObjectType):
 class TaskQuery(graphene.ObjectType):
     tasks = graphene.List(TaskType, project_id=graphene.ID(required=True))
     task = graphene.Field(TaskType, id=graphene.ID(required=True))
-    # task_comments = graphene.List(
-    #     TaskCommentType, task_id=graphene.ID(required=True))
+    task_comments = graphene.List(
+        TaskCommentType, task_id=graphene.ID(required=True))
 
     @login_required
     def resolve_tasks(self, info, project_id):
@@ -49,7 +49,7 @@ class TaskQuery(graphene.ObjectType):
     def resolve_task(self, info, id):
         return get_task_for_user(info.context.user, id)
 
-    # @login_required
-    # def resolve_task_comments(self, info, task_id):
-    #     task = get_task_for_user(info.context.user, task_id)
-    #     return TaskComment.objects.filter(task=task)
+    @login_required
+    def resolve_task_comments(self, info, task_id):
+        task = get_task_for_user(info.context.user, task_id)
+        return TaskComment.objects.filter(task=task)

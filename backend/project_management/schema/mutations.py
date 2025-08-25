@@ -116,26 +116,43 @@ class UpdateTask(graphene.Mutation):
         return UpdateTask(task=task)
 
 
-# class AddTaskComment(graphene.Mutation):
-#     comment = graphene.Field(TaskCommentType)
+class AddTaskComment(graphene.Mutation):
+    comment = graphene.Field(TaskCommentType)
 
-#     class Arguments:
-#         task_id = graphene.ID(required=True)
-#         content = graphene.String(required=True)
+    class Arguments:
+        task_id = graphene.ID(required=True)
+        content = graphene.String(required=True)
 
-#     @login_required
-#     def mutate(self, info, task_id, content):
-#         user = info.context.user
-#         task = Task.objects.get(pk=task_id)
-#         if task.project.organization != user.organization:
-#             raise Exception("Unauthorized")
-#         comment = TaskComment.objects.create(
-#             task=task,
-#             content=content,
-#             author=user,
-#             author_email=user.email
-#         )
-#         return AddTaskComment(comment=comment)
+    @login_required
+    def mutate(self, info, task_id, content):
+        user = info.context.user
+        task = Task.objects.get(pk=task_id)
+        if task.project.organization != user.organization:
+            raise Exception("Unauthorized")
+        comment = TaskComment.objects.create(
+            task=task,
+            content=content,
+            author=user,
+        )
+        return AddTaskComment(comment=comment)
+
+
+class UpdateTaskComment(graphene.Mutation):
+    comment = graphene.Field(TaskCommentType)
+
+    class Arguments:
+        id = graphene.ID(required=True)
+        content = graphene.String(required=True)
+
+    @login_required
+    def mutate(self, info, id, content):
+        user = info.context.user
+        comment = TaskComment.objects.get(pk=id)
+        if comment.task.project.organization != user.organization:
+            raise Exception("Unauthorized")
+        comment.content = content
+        comment.save()
+        return UpdateTaskComment(comment=comment)
 
 
 # Aggregated mutations
@@ -147,4 +164,5 @@ class ProjectMutation(graphene.ObjectType):
 class TaskMutation(graphene.ObjectType):
     create_task = CreateTask.Field()
     update_task = UpdateTask.Field()
-    # add_task_comment = AddTaskComment.Field()
+    add_task_comment = AddTaskComment.Field()
+    update_task_comment = UpdateTaskComment.Field()

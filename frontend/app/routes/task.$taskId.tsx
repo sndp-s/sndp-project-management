@@ -13,6 +13,7 @@ import { useTasks } from "~/hooks/useTasks";
 import { toast } from "sonner";
 import { useTaskComments } from "~/hooks/useTaskComments";
 import { Layout } from "~/components/layout";
+import { Pencil } from "lucide-react";
 
 export async function clientLoader({ }: LoaderFunctionArgs) {
   const token = localStorage.getItem("token");
@@ -112,27 +113,51 @@ export default function TaskDetailsPage() {
   return (
     <Layout>
       <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
+        <div className="flex items-center justify-between">
+          <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
+          {task?.project?.name && <div className="text-sm text-muted-foreground">Project: {task.project.name}</div>}
+        </div>
         {loading && <p>Loading...</p>}
         {error && <p className="text-red-600">{String(error)}</p>}
         {task && (
-          <Card className="p-4 space-y-3">
-            <div className="text-sm text-muted-foreground">Project: {task.project?.name}</div>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
-            <div className="flex items-center gap-2">
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 py-1 text-sm">
-                <option value="TODO">TODO</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="DONE">DONE</option>
-              </select>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <Card className="p-6 space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="title">Title</label>
+                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="status">Status</label>
+                <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full">
+                  <option value="TODO">TODO</option>
+                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                  <option value="DONE">DONE</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="due">Due Date</label>
+                <Input id="due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="assignee">Assignee Email</label>
+                <Input id="assignee" value={assigneeEmail} onChange={(e) => setAssigneeEmail(e.target.value)} placeholder="email@example.com" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium" htmlFor="desc">Description</label>
+                <textarea
+                  id="desc"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={6}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-y"
+                  placeholder="Write a detailed description..."
+                />
+              </div>
             </div>
-            <Input value={assigneeEmail} onChange={(e) => setAssigneeEmail(e.target.value)} placeholder="Assignee email" />
-            {task.createdAt && (
-              <div className="text-xs text-muted-foreground">Created: {new Date(task.createdAt).toLocaleString()}</div>
-            )}
-            <div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              {task.createdAt && <span>Created: {new Date(task.createdAt).toLocaleString()}</span>}
+            </div>
+            <div className="flex justify-end">
               <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
             </div>
           </Card>
@@ -148,6 +173,7 @@ function CommentsSection({ comments, onAdd, onEdit }: { comments: any[]; onAdd: 
   const [draft, setDraft] = useState("");
   const [adding, setAdding] = useState(false);
   const [editDrafts, setEditDrafts] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -161,39 +187,75 @@ function CommentsSection({ comments, onAdd, onEdit }: { comments: any[]; onAdd: 
     setAdding(false);
   };
 
-  const handleEdit = async (id: string) => {
+  const startEdit = (id: string, current: string) => {
+    setEditing((s) => ({ ...s, [id]: true }));
+    setEditDrafts((d) => ({ ...d, [id]: current }));
+  };
+
+  const handleEdit = async (id: string, original: string) => {
     const content = (editDrafts[id] ?? "").trim();
-    if (!content) return;
+    if (!content || content === original) return;
     setSaving((s) => ({ ...s, [id]: true }));
     try {
       await onEdit(id, content);
+      setEditing((s) => ({ ...s, [id]: false }));
     } catch {}
     setSaving((s) => ({ ...s, [id]: false }));
   };
 
   return (
-    <Card className="p-4 space-y-3">
+    <Card className="p-6 space-y-3">
       <h3 className="text-lg font-medium">Comments</h3>
-      <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2">
-        <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a comment" />
-        <Button type="submit" disabled={adding}>{adding ? "Adding..." : "Add"}</Button>
+      <form onSubmit={handleAdd} className="flex flex-col gap-2">
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={3}
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-y"
+          placeholder="Write a comment"
+        />
+        <div className="flex justify-end">
+          <Button type="submit" size="sm" disabled={adding || !draft.trim()}>{adding ? "Adding..." : "Add"}</Button>
+        </div>
       </form>
       <div className="space-y-2">
-        {comments.map((c) => (
-          <div key={c.id} className="flex flex-col gap-2 border rounded p-3">
-            <div className="text-xs text-muted-foreground">
-              <span>{c.author?.email ?? "Unknown"}</span>
-              <span className="ml-2">{new Date(c.createdAt).toLocaleString()}</span>
+        {comments.map((c) => {
+          const isEditing = !!editing[c.id];
+          const currentDraft = editDrafts[c.id] ?? c.content;
+          const changed = currentDraft.trim() !== (c.content ?? "").trim();
+          return (
+            <div key={c.id} className="flex flex-col gap-2 border rounded p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-muted-foreground">
+                  <span>{c.author?.email ?? "Unknown"}</span>
+                  <span className="ml-2">{new Date(c.createdAt).toLocaleString()}</span>
+                </div>
+                {!isEditing && (
+                  <button className="p-1 rounded hover:bg-muted" onClick={() => startEdit(c.id, c.content)} aria-label="Edit">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {isEditing ? (
+                <>
+                  <textarea
+                    value={currentDraft}
+                    onChange={(e) => setEditDrafts((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                    rows={3}
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-y"
+                  />
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={() => handleEdit(c.id, c.content)} disabled={!changed || !!saving[c.id]}>
+                      {saving[c.id] ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm whitespace-pre-wrap">{c.content}</div>
+              )}
             </div>
-            <Input
-              value={editDrafts[c.id] ?? c.content}
-              onChange={(e) => setEditDrafts((prev) => ({ ...prev, [c.id]: e.target.value }))}
-            />
-            <div>
-              <Button onClick={() => handleEdit(c.id)} disabled={saving[c.id]}>{saving[c.id] ? "Saving..." : "Save"}</Button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );

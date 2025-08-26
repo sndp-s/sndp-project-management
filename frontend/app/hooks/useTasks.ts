@@ -25,7 +25,7 @@ const CREATE_TASK = gql`
     $description: String
     $status: String
     $assigneeEmail: String
-    $dueDate: Date
+    $dueDate: String
   ) {
     createTask(
       projectId: $projectId
@@ -54,7 +54,7 @@ const UPDATE_TASK = gql`
     $description: String
     $status: String
     $assigneeEmail: String
-    $dueDate: Date
+    $dueDate: String
   ) {
     updateTask(
       id: $id

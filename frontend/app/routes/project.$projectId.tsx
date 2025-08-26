@@ -8,9 +8,14 @@ import { AuthError, AuthErrorCode } from "~/lib/errors";
 import { Card } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { useTasks } from "~/hooks/useTasks";
-import { useState } from "react";
+import { Dialog, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Label } from "~/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Layout } from "~/components/layout";
+import { useTasks } from "~/hooks/useTasks";
+import { useProjects } from "~/hooks/useProjects";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export async function clientLoader({ }: LoaderFunctionArgs) {
   const token = localStorage.getItem("token");
@@ -47,10 +52,11 @@ const GET_PROJECT = gql`
       name
       description
       status
+      dueDate
+      createdAt
       tasks {
         id
         title
-        description
         status
         dueDate
         createdAt
@@ -63,8 +69,9 @@ const GET_PROJECT = gql`
 export default function ProjectDetailsPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId!;
+  const navigate = useNavigate();
 
-  const { data, loading, error } = useQuery<{ project: { id: string; name: string; description: string; status: string; tasks: any[] } }>(GET_PROJECT, {
+  const { data, loading, error } = useQuery<{ project: any }>(GET_PROJECT, {
     variables: { id: projectId },
     fetchPolicy: "cache-and-network",
   });
@@ -78,17 +85,8 @@ export default function ProjectDetailsPage() {
         {error && <p className="text-red-600">{String(error)}</p>}
         {project && (
           <>
-            <Card className="p-4 space-y-1">
-              <h2 className="text-xl font-semibold">{project.name}</h2>
-              <p className="text-muted-foreground">{project.description}</p>
-              <div>
-                <span className="text-xs inline-block px-2 py-1 rounded border">
-                  {project.status}
-                </span>
-              </div>
-            </Card>
-
-            <TasksSection projectId={project.id} tasks={project.tasks ?? []} />
+            <ProjectHeader project={project} />
+            <TasksSection projectId={project.id} tasks={project.tasks ?? []} onOpenTask={(id) => navigate(`/projects/${projectId}/tasks/${id}`)} />
           </>
         )}
       </div>
@@ -96,111 +94,195 @@ export default function ProjectDetailsPage() {
   );
 }
 
-function TasksSection({ projectId, tasks }: { projectId: string; tasks: any[] }) {
-  const { tasks: liveTasks, createTask } = useTasks(projectId);
-  const list = liveTasks.length ? liveTasks : tasks;
-  const navigate = useNavigate();
+function ProjectHeader({ project }: { project: any }) {
+  const { updateProject } = useProjects();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(project.name ?? "");
+  const [description, setDescription] = useState(project.description ?? "");
+  const [status, setStatus] = useState(project.status ?? "ACTIVE");
+  const [due, setDue] = useState(() => {
+    if (!project.dueDate) return "";
+    const d = new Date(project.dueDate);
+    return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+  });
+  const createdAt = useMemo(() => project.createdAt ? new Date(project.createdAt).toLocaleString() : "-", [project.createdAt]);
+
+  const save = async () => {
+    const changes: any = {};
+    if (name !== project.name) changes.name = name;
+    if ((description ?? "") !== (project.description ?? "")) changes.description = description;
+    if (status !== project.status) changes.status = status;
+    const currentDue = project.dueDate ? (() => { const d = new Date(project.dueDate); return isNaN(d.getTime()) ? "" : d.toISOString().slice(0,10); })() : "";
+    if (due !== currentDue) changes.dueDate = due || null;
+
+    if (Object.keys(changes).length === 0) {
+      setOpen(false);
+      return;
+    }
+    try {
+      await updateProject(project.id, changes);
+      toast.success("Project updated");
+      setOpen(false);
+    } catch {}
+  };
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium">Tasks</h3>
-      <CreateTaskForm projectId={projectId} onCreate={createTask} />
-      <TaskGrid tasks={list} projectId={projectId} onOpenTask={(id) => navigate(`/projects/${projectId}/tasks/${id}`)} />
-    </div>
+    <Card className="p-4 space-y-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold">{project.name}</h2>
+          <p className="text-muted-foreground">{project.description}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {project.dueDate && <span>Due: {new Date(project.dueDate).toLocaleDateString()}</span>}
+            {project.createdAt && <span>Created: {createdAt}</span>}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <span className="inline-block px-2 py-0.5 rounded border text-xs">{project.status}</span>
+          <Button onClick={() => setOpen(true)}>Edit Project</Button>
+        </div>
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <div className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{"Edit Project"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="pname">Name</Label>
+              <Input id="pname" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pstatus">Status</Label>
+              <select id="pstatus" value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full">
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="ON_HOLD">ON_HOLD</option>
+                <option value="COMPLETED">COMPLETED</option>
+              </select>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="pdesc">Description</Label>
+              <Input id="pdesc" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="pdue">Due Date</Label>
+              <Input id="pdue" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={save}>Save</Button>
+          </DialogFooter>
+        </div>
+      </Dialog>
+    </Card>
   );
 }
 
-function CreateTaskForm({ projectId, onCreate }: { projectId: string; onCreate: (input: { title: string; description?: string; status?: string; assigneeEmail?: string; dueDate?: string }) => Promise<void> }) {
+function TasksSection({ projectId, tasks, onOpenTask }: { projectId: string; tasks: any[]; onOpenTask: (id: string) => void }) {
+  const { tasks: liveTasks, createTask } = useTasks(projectId);
+  const list = liveTasks.length ? liveTasks : tasks;
+
+  const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [status, setStatus] = useState("TODO");
   const [dueDate, setDueDate] = useState("");
   const [assigneeEmail, setAssigneeEmail] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreate = async () => {
     setCreating(true);
     try {
-      await onCreate({ title, description: description || undefined, status, assigneeEmail: assigneeEmail || undefined, dueDate: dueDate || undefined });
+      await createTask({ title, status, dueDate: dueDate || undefined, assigneeEmail: assigneeEmail || undefined });
+      setCreateOpen(false);
       setTitle("");
-      setDescription("");
       setStatus("TODO");
       setDueDate("");
       setAssigneeEmail("");
+      toast.success("Task created");
     } finally {
       setCreating(false);
     }
   };
 
   return (
-    <form onSubmit={handleCreate} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 items-start">
-      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title" required />
-      <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" />
-      <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 py-1 text-sm">
-        <option value="TODO">TODO</option>
-        <option value="IN_PROGRESS">IN_PROGRESS</option>
-        <option value="DONE">DONE</option>
-      </select>
-      <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} placeholder="Due date" />
-      <Input value={assigneeEmail} onChange={(e) => setAssigneeEmail(e.target.value)} placeholder="Assignee email (optional)" />
-      <Button type="submit" disabled={creating} className="sm:col-span-2 lg:col-span-1">{creating ? "Creating..." : "Add Task"}</Button>
-    </form>
-  );
-}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Tasks</h3>
+        <Button onClick={() => setCreateOpen(true)}>New Task</Button>
+      </div>
 
-function TaskGrid({ tasks, projectId, onOpenTask }: { tasks: any[]; projectId: string; onOpenTask: (id: string) => void }) {
-  const { updateTask } = useTasks(projectId);
-  const [drafts, setDrafts] = useState<Record<string, { title: string; description: string; status: string }>>({});
-  const [saving, setSaving] = useState<Record<string, boolean>>({});
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{"Title"}</TableHead>
+              <TableHead>{"Status"}</TableHead>
+              <TableHead>{"Assignee"}</TableHead>
+              <TableHead>{"Due"}</TableHead>
+              <TableHead>{"Created"}</TableHead>
+              <TableHead className="text-right">{"Actions"}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {list.map((t) => (
+              <TableRow key={t.id}>
+                <TableCell className="font-medium">{t.title}</TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    t.status === 'TODO' ? 'bg-gray-100 text-gray-800' :
+                    t.status === 'IN_PROGRESS' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {t.status}
+                  </span>
+                </TableCell>
+                <TableCell>{t.assignee?.email ?? '-'}</TableCell>
+                <TableCell>{t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '-'}</TableCell>
+                <TableCell>{t.createdAt ? new Date(t.createdAt).toLocaleString() : '-'}</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="outline" size="sm" onClick={() => onOpenTask(t.id)}>Open</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-  const getDraft = (t: any) => drafts[t.id] ?? { title: t.title, description: t.description ?? "", status: t.status };
-
-  const handleSave = async (t: any) => {
-    const d = getDraft(t);
-    const patch: any = {};
-    if (d.title !== t.title) patch.title = d.title;
-    if ((d.description ?? "") !== (t.description ?? "")) patch.description = d.description;
-    if (d.status !== t.status) patch.status = d.status;
-    if (Object.keys(patch).length === 0) return;
-    try {
-      setSaving((s) => ({ ...s, [t.id]: true }));
-      await updateTask(t.id, patch);
-    } finally {
-      setSaving((s) => ({ ...s, [t.id]: false }));
-    }
-  };
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {tasks.map((t) => {
-        const d = getDraft(t);
-        const changed = d.title !== t.title || (d.description ?? "") !== (t.description ?? "") || d.status !== t.status;
-        return (
-          <Card key={t.id} className="p-4 space-y-2">
-            <Input value={d.title} onChange={(e) => setDrafts((prev) => ({ ...prev, [t.id]: { ...d, title: e.target.value } }))} />
-            <Input value={d.description} onChange={(e) => setDrafts((prev) => ({ ...prev, [t.id]: { ...d, description: e.target.value } }))} placeholder="Description" />
-            <div className="flex items-center gap-2">
-              <select
-                value={d.status}
-                onChange={(e) => setDrafts((prev) => ({ ...prev, [t.id]: { ...d, status: e.target.value } }))}
-                className="h-9 rounded-md border bg-background px-3 py-1 text-sm"
-              >
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <div className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{"Create Task"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="t-title">Title</Label>
+              <Input id="t-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="t-status">Status</Label>
+              <select id="t-status" value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border bg-background px-3 py-1 text-sm w-full">
                 <option value="TODO">TODO</option>
                 <option value="IN_PROGRESS">IN_PROGRESS</option>
                 <option value="DONE">DONE</option>
               </select>
-              <Button onClick={() => handleSave(t)} disabled={!changed || saving[t.id]}>
-                {saving[t.id] ? "Saving..." : "Save"}
-              </Button>
-              <Button variant="secondary" onClick={() => onOpenTask(t.id)}>Open</Button>
             </div>
-            <div className="text-xs text-muted-foreground">
-              <span>Status: {t.status}</span>
-              {t.createdAt && <span className="ml-2">Created: {new Date(t.createdAt).toLocaleString()}</span>}
+            <div className="space-y-2">
+              <Label htmlFor="t-assignee">Assignee Email</Label>
+              <Input id="t-assignee" value={assigneeEmail} onChange={(e) => setAssigneeEmail(e.target.value)} />
             </div>
-          </Card>
-        );
-      })}
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="t-due">Due Date</Label>
+              <Input id="t-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={creating || !title.trim()}>{creating ? "Creating..." : "Create"}</Button>
+          </DialogFooter>
+        </div>
+      </Dialog>
     </div>
   );
 }

@@ -67,7 +67,7 @@ export function useProjects() {
     }
   );
 
-  const [createMutation] = useMutation(CREATE_PROJECT, {
+  const [createMutation] = useMutation<{ createProject: { project: Project } }>(CREATE_PROJECT, {
     update(cache, { data }) {
       const created = data?.createProject?.project as Project | undefined;
       if (!created) return;
@@ -86,7 +86,7 @@ export function useProjects() {
     },
   });
 
-  const [updateMutation] = useMutation(UPDATE_PROJECT, {
+  const [updateMutation] = useMutation<{ updateProject: { project: Project } }>(UPDATE_PROJECT, {
     update(cache, { data }) {
       const updated = data?.updateProject?.project as Project | undefined;
       if (!updated) return;
@@ -132,7 +132,7 @@ export function useProjects() {
 
   const updateProject = async (
     id: string,
-    patch: Partial<Pick<Project, "name" | "description" | "status">>
+    patch: Partial<Pick<Project, "name" | "description" | "status" | "dueDate">>
   ) => {
     const current = data?.projects.find((p) => p.id === id);
     const optimistic = current ? { ...current, ...patch } : { id, ...patch };

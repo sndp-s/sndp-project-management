@@ -124,6 +124,7 @@ export function useProjects() {
           },
         },
       });
+      toast.success("Project created successfully!");
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to create project");
       throw err;
@@ -146,6 +147,7 @@ export function useProjects() {
           },
         },
       });
+      toast.success("Project updated successfully!");
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to update project");
       throw err;

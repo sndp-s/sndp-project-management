@@ -65,6 +65,23 @@ export async function verify(token: string): Promise<VerifyPayload> {
   }
 }
 
+export function verifyAuth(): { isAuthenticated: boolean; userInfo: any | null } {
+  try {
+    const token = localStorage.getItem("token");
+    const userInfo = localStorage.getItem("userInfo");
+    
+    if (!token || !userInfo) {
+      return { isAuthenticated: false, userInfo: null };
+    }
+
+    const parsed = JSON.parse(userInfo);
+    return { isAuthenticated: true, userInfo: parsed };
+  } catch {
+    return { isAuthenticated: false, userInfo: null };
+  }
+}
+
+
 //
 // login
 //

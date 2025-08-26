@@ -6,7 +6,7 @@ from project_management.models import Project, Task, TaskComment
 class ProjectType(DjangoObjectType):
     class Meta:
         model = Project
-        fields = ("id", "name", "description", "tasks", "status")
+        fields = ("id", "name", "description", "tasks", "status", "due_date", "created_at")
 
     tasks = graphene.List(lambda: TaskType)
 

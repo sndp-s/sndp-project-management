@@ -1,6 +1,10 @@
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import { useParams, useNavigate } from "react-router";
+import { redirect } from "react-router";
+import type { LoaderFunctionArgs } from "react-router";
+import { verify } from "~/lib/auth";
+import { AuthError, AuthErrorCode } from "~/lib/errors";
 import { Card } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -8,6 +12,35 @@ import { useEffect, useState } from "react";
 import { useTasks } from "~/hooks/useTasks";
 import { toast } from "sonner";
 import { useTaskComments } from "~/hooks/useTaskComments";
+import { Layout } from "~/components/layout";
+
+export async function clientLoader({ }: LoaderFunctionArgs) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw redirect("/login");
+  }
+
+  try {
+    await verify(token)
+  } catch (err) {
+    if (err instanceof AuthError) {
+      if (
+        err.code === AuthErrorCode.EXPIRED ||
+        err.code === AuthErrorCode.INVALID
+      ) {
+        localStorage.removeItem("token");
+        throw redirect("/login");
+      } else if (
+        err.code === AuthErrorCode.UNKNOWN ||
+        err.code === AuthErrorCode.NETWORK
+      ) {
+        throw redirect("/network-error");
+      }
+    }
+  }
+  return null;
+}
 
 const GET_TASK = gql`
   query GET_TASK($id: ID!) {
@@ -31,6 +64,7 @@ export default function TaskDetailsPage() {
   const projectId = params.projectId!;
   const taskId = params.taskId!;
   const { updateTask } = useTasks(projectId);
+  const { comments, addComment, updateComment } = useTaskComments(taskId);
 
   const { data, loading, error, refetch } = useQuery(GET_TASK, {
     variables: { id: taskId },
@@ -38,7 +72,6 @@ export default function TaskDetailsPage() {
   });
 
   const task = data?.task;
-  const { comments, addComment, updateComment } = useTaskComments(taskId);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -77,12 +110,12 @@ export default function TaskDetailsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-600">{String(error)}</p>}
-      {task && (
-        <>
+    <Layout>
+      <div className="space-y-6">
+        <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
+        {loading && <p>Loading...</p>}
+        {error && <p className="text-red-600">{String(error)}</p>}
+        {task && (
           <Card className="p-4 space-y-3">
             <div className="text-sm text-muted-foreground">Project: {task.project?.name}</div>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
@@ -103,11 +136,11 @@ export default function TaskDetailsPage() {
               <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
             </div>
           </Card>
+        )}
 
-          <CommentsSection comments={comments} onAdd={addComment} onEdit={updateComment} />
-        </>
-      )}
-    </div>
+        <CommentsSection comments={comments} onAdd={addComment} onEdit={updateComment} />
+      </div>
+    </Layout>
   );
 }
 

@@ -126,11 +126,12 @@ export async function login(
       throw new AuthError(AuthErrorCode.UNKNOWN, "No token returned");
     }
 
-    // Save token(s) for future requests
+    // Save token(s) and basic user info for header
     localStorage.setItem("token", data.tokenAuth.token);
     if (data.tokenAuth.refreshToken) {
       localStorage.setItem("refreshToken", data.tokenAuth.refreshToken);
     }
+    localStorage.setItem("userInfo", JSON.stringify(data.tokenAuth.user));
 
     return data.tokenAuth;
   } catch (err: unknown) {

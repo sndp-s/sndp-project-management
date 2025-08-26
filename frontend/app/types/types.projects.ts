@@ -3,4 +3,6 @@ export interface Project {
   name: string;
   description: string;
   status: string;
+  dueDate?: string | null;
+  createdAt?: string | null;
 }

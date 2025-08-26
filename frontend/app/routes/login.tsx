@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, redirect } from "react-router";
+import { useNavigate, redirect, useSearchParams } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -8,7 +8,9 @@ import { login } from "~/lib/auth";
 import { verify } from "~/lib/auth";
 import { AuthError, AuthErrorCode } from "~/lib/errors";
 
-export async function clientLoader({ }: LoaderFunctionArgs) {
+export async function clientLoader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const returnTo = url.searchParams.get("returnTo");
   const token = localStorage.getItem("token");
 
   if (!token) {
@@ -17,8 +19,8 @@ export async function clientLoader({ }: LoaderFunctionArgs) {
 
   try {
     await verify(token);
-    // If we get here, token is valid, redirect to home
-    throw redirect("/");
+    // If we get here, token is valid, redirect to returnTo or home
+    throw redirect(returnTo || "/");
   } catch (err) {
     if (err instanceof AuthError) {
       if (
@@ -46,6 +48,8 @@ export async function clientLoader({ }: LoaderFunctionArgs) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo") || "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,7 +62,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      navigate("/");
+      navigate(returnTo);
     } catch (err: any) {
       setError(err.message || "Login failed");
     } finally {

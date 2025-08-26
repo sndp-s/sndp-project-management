@@ -73,25 +73,25 @@ export default function ProjectDetailsPage() {
 
   return (
     <Layout>
-    <div className="space-y-6">
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-600">{String(error)}</p>}
-      {project && (
-        <>
-          <Card className="p-4 space-y-1">
-            <h2 className="text-xl font-semibold">{project.name}</h2>
-            <p className="text-muted-foreground">{project.description}</p>
-            <div>
-              <span className="text-xs inline-block px-2 py-1 rounded border">
-                {project.status}
-              </span>
-            </div>
-          </Card>
+      <div className="space-y-6">
+        {loading && <p>Loading...</p>}
+        {error && <p className="text-red-600">{String(error)}</p>}
+        {project && (
+          <>
+            <Card className="p-4 space-y-1">
+              <h2 className="text-xl font-semibold">{project.name}</h2>
+              <p className="text-muted-foreground">{project.description}</p>
+              <div>
+                <span className="text-xs inline-block px-2 py-1 rounded border">
+                  {project.status}
+                </span>
+              </div>
+            </Card>
 
-          <TasksSection projectId={project.id} tasks={project.tasks ?? []} />
-        </>
-      )}
-    </div>
+            <TasksSection projectId={project.id} tasks={project.tasks ?? []} />
+          </>
+        )}
+      </div>
     </Layout>
   );
 }

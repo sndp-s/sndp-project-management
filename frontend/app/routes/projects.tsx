@@ -153,7 +153,7 @@ export default function ProjectsPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
@@ -311,7 +311,7 @@ export default function ProjectsPage() {
             </DialogFooter>
           </div>
         </Dialog>
-      </div>
+    </div>
     </Layout>
   );
 }

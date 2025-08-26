@@ -8,6 +8,3 @@ export function AppHeader({ orgName, userEmail }: { orgName: string; userEmail: 
     </header>
   );
 }
-
-
-

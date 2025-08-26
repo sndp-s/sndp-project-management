@@ -11,6 +11,8 @@ const GET_PROJECTS = gql`
       name
       description
       status
+      dueDate
+      createdAt
     }
   }
 `;
@@ -23,6 +25,8 @@ const CREATE_PROJECT = gql`
         name
         description
         status
+        dueDate
+        createdAt
       }
     }
   }
@@ -34,18 +38,22 @@ const UPDATE_PROJECT = gql`
     $name: String
     $description: String
     $status: String
+    $dueDate: String
   ) {
     updateProject(
       id: $id
       name: $name
       description: $description
       status: $status
+      dueDate: $dueDate
     ) {
       project {
         id
         name
         description
         status
+        dueDate
+        createdAt
       }
     }
   }

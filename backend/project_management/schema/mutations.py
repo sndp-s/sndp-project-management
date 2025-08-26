@@ -4,6 +4,7 @@ from project_management.models import Project, Task, TaskComment
 from accounts.models import CustomUser
 from project_management.schema.types import ProjectType, TaskType, TaskCommentType
 from project_management.helpers import get_project_for_user
+from datetime import datetime
 
 
 class CreateProject(graphene.Mutation):
@@ -13,16 +14,25 @@ class CreateProject(graphene.Mutation):
         name = graphene.String(required=True)
         description = graphene.String()
         status = graphene.String()
-        due_date = graphene.Date()
+        dueDate = graphene.String()
 
     @login_required
-    def mutate(self, info, name, description=None, status="ACTIVE", due_date=None):
+    def mutate(self, info, name, description=None, status="ACTIVE", dueDate=None):
         user = info.context.user
+        
+        # Convert string date to Date object or None
+        due_date_obj = None
+        if dueDate and dueDate.strip():
+            try:
+                due_date_obj = datetime.strptime(dueDate, '%Y-%m-%d').date()
+            except ValueError:
+                raise Exception("Invalid date format. Use YYYY-MM-DD")
+        
         project = Project.objects.create(
             name=name,
             description=description or "",
             status=status,
-            due_date=due_date,
+            due_date=due_date_obj,
             organization=user.organization,
         )
         return CreateProject(project=project)
@@ -36,15 +46,30 @@ class UpdateProject(graphene.Mutation):
         name = graphene.String()
         description = graphene.String()
         status = graphene.String()
-        due_date = graphene.Date()
+        dueDate = graphene.String()
 
     @login_required
     def mutate(self, info, id, **kwargs):
         user = info.context.user
         project = get_project_for_user(user, id)
+        
+        # Handle dueDate conversion
+        if 'dueDate' in kwargs:
+            dueDate = kwargs.pop('dueDate')
+            if dueDate and dueDate.strip():
+                try:
+                    due_date_obj = datetime.strptime(dueDate, '%Y-%m-%d').date()
+                    project.due_date = due_date_obj
+                except ValueError:
+                    raise Exception("Invalid date format. Use YYYY-MM-DD")
+            else:
+                project.due_date = None
+        
+        # Handle other fields
         for key, value in kwargs.items():
             if value is not None:
                 setattr(project, key, value)
+        
         project.save()
         return UpdateProject(project=project)
 
@@ -53,27 +78,35 @@ class CreateTask(graphene.Mutation):
     task = graphene.Field(TaskType)
 
     class Arguments:
-        project_id = graphene.ID(required=True)
+        projectId = graphene.ID(required=True)
         title = graphene.String(required=True)
         description = graphene.String()
         status = graphene.String()
-        assignee_email = graphene.String()
-        due_date = graphene.Date()
+        assigneeEmail = graphene.String()
+        dueDate = graphene.String()
 
     @login_required
-    def mutate(self, info, project_id, title, description="", status="TODO", assignee_email=None, due_date=None):
+    def mutate(self, info, projectId, title, description="", status="TODO", assigneeEmail=None, dueDate=None):
         user = info.context.user
-        project = get_project_for_user(user, project_id)
+        project = get_project_for_user(user, projectId)
 
         assignee = None
-        if assignee_email:
+        if assigneeEmail:
             from accounts.models import CustomUser
             try:
                 assignee = CustomUser.objects.get(
-                    email=assignee_email, organization=user.organization
+                    email=assigneeEmail, organization=user.organization
                 )
             except CustomUser.DoesNotExist:
                 raise Exception("Assignee not found in your organization")
+
+        # Convert string date to DateTime object or None
+        due_date_obj = None
+        if dueDate and dueDate.strip():
+            try:
+                due_date_obj = datetime.strptime(dueDate, '%Y-%m-%d')
+            except ValueError:
+                raise Exception("Invalid date format. Use YYYY-MM-DD")
 
         task = Task.objects.create(
             project=project,
@@ -81,7 +114,7 @@ class CreateTask(graphene.Mutation):
             description=description,
             status=status,
             assignee=assignee,
-            due_date=due_date,
+            due_date=due_date_obj,
         )
         return CreateTask(task=task)
 
@@ -94,8 +127,8 @@ class UpdateTask(graphene.Mutation):
         title = graphene.String()
         description = graphene.String()
         status = graphene.String()
-        assignee_email = graphene.String()
-        due_date = graphene.Date()
+        assigneeEmail = graphene.String()
+        dueDate = graphene.String()
 
     @login_required
     def mutate(self, info, id, **kwargs):
@@ -103,15 +136,33 @@ class UpdateTask(graphene.Mutation):
         task = Task.objects.get(pk=id)
         if task.project.organization != user.organization:
             raise Exception("Unauthorized")
-        assignee_email = kwargs.pop("assignee_email", None)
-        if assignee_email:
+        
+        # Handle assigneeEmail
+        assigneeEmail = kwargs.pop("assigneeEmail", None)
+        if assigneeEmail:
             try:
                 kwargs["assignee"] = CustomUser.objects.get(
-                    email=assignee_email, organization=user.organization)
+                    email=assigneeEmail, organization=user.organization)
             except CustomUser.DoesNotExist:
                 raise Exception("Assignee not found in your organization")
+        
+        # Handle dueDate conversion
+        if 'dueDate' in kwargs:
+            dueDate = kwargs.pop('dueDate')
+            if dueDate and dueDate.strip():
+                try:
+                    due_date_obj = datetime.strptime(dueDate, '%Y-%m-%d')
+                    task.due_date = due_date_obj
+                except ValueError:
+                    raise Exception("Invalid date format. Use YYYY-MM-DD")
+            else:
+                task.due_date = None
+        
+        # Handle other fields
         for key, value in kwargs.items():
-            setattr(task, key, value)
+            if value is not None:
+                setattr(task, key, value)
+        
         task.save()
         return UpdateTask(task=task)
 

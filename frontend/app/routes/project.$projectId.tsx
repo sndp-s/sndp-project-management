@@ -66,6 +66,16 @@ const GET_PROJECT = gql`
   }
 `;
 
+const GET_PROJECT_STATS = gql`
+  query GET_PROJECT_STATS($projectId: ID!) {
+    projectStats(projectId: $projectId) {
+      totalTasks
+      completedTasks
+      completionRate
+    }
+  }
+`;
+
 export default function ProjectDetailsPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId!;
@@ -76,16 +86,26 @@ export default function ProjectDetailsPage() {
     fetchPolicy: "cache-and-network",
   });
 
+  const { data: statsData } = useQuery<{ projectStats: { totalTasks: number; completedTasks: number; completionRate: number } }>(GET_PROJECT_STATS, {
+    variables: { projectId },
+    fetchPolicy: "cache-and-network",
+    skip: !projectId,
+  });
+
   const project = data?.project;
+  const stats = statsData?.projectStats;
 
   return (
     <Layout>
       <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Button variant="secondary" onClick={() => navigate(-1)}>Back</Button>
+        </div>
         {loading && <p>Loading...</p>}
         {error && <p className="text-red-600">{String(error)}</p>}
         {project && (
           <>
-            <ProjectHeader project={project} />
+            <ProjectHeader project={project} stats={stats} />
             <TasksSection projectId={project.id} tasks={project.tasks ?? []} onOpenTask={(id) => navigate(`/projects/${projectId}/tasks/${id}`)} />
           </>
         )}
@@ -94,7 +114,7 @@ export default function ProjectDetailsPage() {
   );
 }
 
-function ProjectHeader({ project }: { project: any }) {
+function ProjectHeader({ project, stats }: { project: any; stats?: { totalTasks: number; completedTasks: number; completionRate: number } }) {
   const { updateProject } = useProjects();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(project.name ?? "");
@@ -127,21 +147,38 @@ function ProjectHeader({ project }: { project: any }) {
   };
 
   return (
-    <Card className="p-4 space-y-3">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold">{project.name}</h2>
-          <p className="text-muted-foreground">{project.description}</p>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <Card className="p-6 space-y-5">
+      <div className="flex items-start justify-between gap-6">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold leading-tight">{project.name}</h2>
+          {project.description && <p className="text-sm text-muted-foreground leading-relaxed">{project.description}</p>}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {project.dueDate && <span>Due: {new Date(project.dueDate).toLocaleDateString()}</span>}
             {project.createdAt && <span>Created: {createdAt}</span>}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-3">
           <span className="inline-block px-2 py-0.5 rounded border text-xs">{project.status}</span>
-          <Button onClick={() => setOpen(true)}>Edit Project</Button>
+          <Button onClick={() => setOpen(true)} size="sm">Edit Project</Button>
         </div>
       </div>
+
+      {stats && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-md border p-3">
+            <div className="text-xs text-muted-foreground">Total Tasks</div>
+            <div className="text-lg font-semibold">{stats.totalTasks}</div>
+          </div>
+          <div className="rounded-md border p-3">
+            <div className="text-xs text-muted-foreground">Completed</div>
+            <div className="text-lg font-semibold">{stats.completedTasks}</div>
+          </div>
+          <div className="rounded-md border p-3">
+            <div className="text-xs text-muted-foreground">Completion</div>
+            <div className="text-lg font-semibold">{Math.min(100, Math.max(0, Math.round(stats.completionRate ?? 0)))}%</div>
+          </div>
+        </div>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <div className="space-y-4">
@@ -163,7 +200,7 @@ function ProjectHeader({ project }: { project: any }) {
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="pdesc">Description</Label>
-              <Input id="pdesc" value={description} onChange={(e) => setDescription(e.target.value)} />
+              <textarea id="pdesc" value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-y" />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="pdue">Due Date</Label>

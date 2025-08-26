@@ -40,6 +40,7 @@ export default function ProjectDetailsPage() {
   const project = data?.project;
 
   return (
+    <Layout>
     <div className="space-y-6">
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-600">{String(error)}</p>}
@@ -59,6 +60,7 @@ export default function ProjectDetailsPage() {
         </>
       )}
     </div>
+    </Layout>
   );
 }
 

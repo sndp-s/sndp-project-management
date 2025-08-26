@@ -30,7 +30,6 @@ const GET_PROJECT = gql`
 export default function ProjectDetailsPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId!;
-  const navigate = useNavigate();
 
   const { data, loading, error } = useQuery<{ project: { id: string; name: string; description: string; status: string; tasks: any[] } }>(GET_PROJECT, {
     variables: { id: projectId },

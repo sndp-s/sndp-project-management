@@ -10,12 +10,21 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+import datetime
 from pathlib import Path
 from decouple import Config, RepositoryEnv, Csv
-import datetime
 
 
-config = Config(RepositoryEnv('../.backend.env'))
+# If running locally, explicitly load from .backend.env
+backend_env_file = os.path.join(os.path.dirname(
+    os.path.dirname(__file__)), ".backend.env")
+
+if os.path.exists(backend_env_file):
+    config = Config(RepositoryEnv(backend_env_file))
+else:
+    # Fall back to real environment (Docker Compose)
+    from decouple import config
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

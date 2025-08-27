@@ -13,16 +13,16 @@
 
 ### Setup & Deployment
 - Clone this repo
-- add these env files at the root
+- add these env files to the root
 
-1. `.db.prod.env`
+`.db.prod.env`
 ```
 POSTGRES_DB=DB_NAME
 POSTGRES_USER=DB_USER
 POSTGRES_PASSWORD=STRONG_DB_PASSWORD
 ```
 
-2. `.backend.prod.env`
+`.backend.prod.env`
 ```
 DB_HOST=project-management-db
 DB_PORT=5432
@@ -42,7 +42,8 @@ JWT_ACCESS_TOKEN_EXPIRES_MINUTES=15
 JWT_REFRESH_TOKEN_EXPIRES_DAYS=7
 ```
 
-3. `frontend.prod.env`
+- clone this file to `root/frontend`
+`frontend.prod.env`
 ```
 VITE_API_URL=http://project-management-backend:8000/graphql/
 ```

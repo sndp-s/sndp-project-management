@@ -9,6 +9,7 @@ import {
 import { Toaster } from "~/components/ui/toaster";
 import { ApolloProvider } from "@apollo/client/react";
 import { authClient } from "~/lib/apollo";
+// import { toast } from "sonner";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -46,6 +47,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // // Global runtime error handler - show friendly toast, avoid tech details
+  // if (typeof window !== "undefined" && !(window as any).__GLOBAL_ERROR_HANDLER__) {
+  //   (window as any).__GLOBAL_ERROR_HANDLER__ = true;
+  //   window.addEventListener("error", () => {
+  //     toast.error("Something went wrong. Please try again.");
+  //   });
+  //   window.addEventListener("unhandledrejection", () => {
+  //     toast.error("Something went wrong. Please try again.");
+  //   });
+  // }
   return (
     <ApolloProvider client={authClient}>
       <Outlet />

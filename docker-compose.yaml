@@ -18,10 +18,6 @@ services:
     container_name: project-management-backend
     env_file:
       - ${BACKEND_ENV_FILE:-.backend.prod.env}
-    environment:
-      # Ensure backend can reach the DB service by its compose DNS name
-      DB_HOST: ${DB_HOST:-project-management-db}
-      DB_PORT: ${DB_PORT:-5432}
     depends_on:
       - project-management-db
     ports:
@@ -34,7 +30,7 @@ services:
       context: ./frontend
     container_name: project-management-frontend
     env_file:
-      - ${FRONTEND_ENV_FILE:-.frontend.prod.env}
+      - .frontend.prod.env
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://project-management-backend:8000/graphql/}
     depends_on:

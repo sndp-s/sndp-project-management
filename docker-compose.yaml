@@ -29,8 +29,6 @@ services:
     build:
       context: ./frontend
     container_name: project-management-frontend
-    env_file:
-      - .frontend.prod.env
     depends_on:
       - project-management-backend
     ports:

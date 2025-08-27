@@ -12,8 +12,8 @@
 <!-- - [License](#license) -->
 
 ### Setup & Deployment
-- Clone this repo
-- add these env files to the root
+1. clone this repo
+2. add these env files to the root
 
 `.db.prod.env`
 ```
@@ -42,10 +42,10 @@ JWT_ACCESS_TOKEN_EXPIRES_MINUTES=15
 JWT_REFRESH_TOKEN_EXPIRES_DAYS=7
 ```
 
-- add this env file to `root/frontend`
+3. add this env file to `root/frontend`
 `frontend.prod.env`
 ```
 VITE_API_URL=http://localhost:8000/graphql/
 ```
 
-- build and run the containers (from the repo root): `docker compose up -d`
+4. build and run the containers (from the repo root): `docker compose up -d`

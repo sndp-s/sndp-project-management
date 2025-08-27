@@ -17,7 +17,7 @@ services:
       context: ./backend
     container_name: project-management-backend
     env_file:
-      - ${BACKEND_ENV_FILE:-.backend.prod.env}
+      - .backend.prod.env
     depends_on:
       - project-management-db
     ports:
@@ -31,8 +31,6 @@ services:
     container_name: project-management-frontend
     env_file:
       - .frontend.prod.env
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-http://project-management-backend:8000/graphql/}
     depends_on:
       - project-management-backend
     ports:

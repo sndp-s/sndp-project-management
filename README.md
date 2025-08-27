@@ -42,10 +42,10 @@ JWT_ACCESS_TOKEN_EXPIRES_MINUTES=15
 JWT_REFRESH_TOKEN_EXPIRES_DAYS=7
 ```
 
-- clone this file to `root/frontend`
+- add this env file to `root/frontend`
 `frontend.prod.env`
 ```
-VITE_API_URL=http://project-management-backend:8000/graphql/
+VITE_API_URL=http://localhost:8000/graphql/
 ```
 
-- build and run containers (from the repo root): `docker compose up -d`
+- build and run the containers (from the repo root): `docker compose up -d`

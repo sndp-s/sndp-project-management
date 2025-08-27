@@ -5,10 +5,48 @@ services:
     volumes:
       - project_management_pgdata:/var/lib/postgresql/data
     env_file:
-      - .db.env
+      - .db.prod.env
     restart: unless-stopped
     ports:
       - "5432:5432"
+    networks:
+      - app_net
+
+  project-management-backend:
+    build:
+      context: ./backend
+    container_name: project-management-backend
+    env_file:
+      - ${BACKEND_ENV_FILE:-.backend.prod.env}
+    environment:
+      # Ensure backend can reach the DB service by its compose DNS name
+      DB_HOST: ${DB_HOST:-project-management-db}
+      DB_PORT: ${DB_PORT:-5432}
+    depends_on:
+      - project-management-db
+    ports:
+      - "8000:8000"
+    networks:
+      - app_net
+
+  project-management-frontend:
+    build:
+      context: ./frontend
+    container_name: project-management-frontend
+    env_file:
+      - ${FRONTEND_ENV_FILE:-.frontend.prod.env}
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://project-management-backend:8000/graphql/}
+    depends_on:
+      - project-management-backend
+    ports:
+      - "3000:3000"
+    networks:
+      - app_net
 
 volumes:
   project_management_pgdata:
+
+networks:
+  app_net:
+    driver: bridge

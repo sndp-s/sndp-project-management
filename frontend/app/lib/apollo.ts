@@ -36,6 +36,14 @@ async function requestTokenRefresh(
   };
 }
 
+function goToLoginWithReturn() {
+  if (typeof window === "undefined") return;
+  const returnTo = encodeURIComponent(
+    `${window.location.pathname}${window.location.search}${window.location.hash}`
+  );
+  window.location.assign(`/login?returnTo=${returnTo}`);
+}
+
 const errorLink = new ErrorLink(({ error, operation, forward }) => {
   if (CombinedGraphQLErrors.is(error)) {
     const messages = error.errors.map((e) => (e.message || "").toLowerCase());
@@ -52,7 +60,7 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
     if (!currentRefresh) {
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
-      if (typeof window !== "undefined") window.location.assign("/login");
+      goToLoginWithReturn();
       return;
     }
 
@@ -81,9 +89,7 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
               console.error("Token refresh returned no token");
               localStorage.removeItem("token");
               localStorage.removeItem("refreshToken");
-              if (typeof window !== "undefined") {
-                window.location.assign("/login");
-              }
+              goToLoginWithReturn();
             }
 
             const subscriber = forward(operation).subscribe({
@@ -99,9 +105,7 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
           console.error("Token refresh failed", err);
           localStorage.removeItem("token");
           localStorage.removeItem("refreshToken");
-          if (typeof window !== "undefined") {
-            window.location.assign("/login");
-          }
+          goToLoginWithReturn();
           observer.error(err);
         });
     });

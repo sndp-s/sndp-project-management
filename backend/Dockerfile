@@ -22,11 +22,8 @@ COPY . .
 # Install dependencies using uv
 RUN uv sync --frozen --no-cache
 
-# Collect static files (for admin)
-RUN uv run python manage.py collectstatic --noinput || true
-
 # Default port
 ENV PORT=8000
 
-# Run Django ASGI app with Uvicorn
-CMD ["sh", "-c", "uv run python manage.py migrate && uv run uvicorn backend.asgi:application --host 0.0.0.0 --port 8000"]
+# Run migrations, collect static, then start Uvicorn
+CMD ["sh", "-c", "uv run python manage.py migrate && uv run python manage.py collectstatic --noinput && uv run uvicorn backend.asgi:application --host 0.0.0.0 --port 8000"]

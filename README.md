@@ -31,7 +31,7 @@ DB_HOST=project-management-db
 DB_PORT=5432
 DB_NAME=DB_NAME
 DB_USER=DB_USER
-DB_PASS=DB_PASSWORD
+DB_PASS=STRONG_DB_PASSWORD
 
 SECRET_KEY=STRONG_SECRET_KEY
 
@@ -45,8 +45,7 @@ JWT_ACCESS_TOKEN_EXPIRES_MINUTES=15
 JWT_REFRESH_TOKEN_EXPIRES_DAYS=7
 ```
 
-3. add this env file to `root/frontend`
-   `frontend.prod.env`
+3. add this env file `frontend/frontend.prod.env`
 
 ```
 VITE_API_URL=http://localhost:8000/graphql/

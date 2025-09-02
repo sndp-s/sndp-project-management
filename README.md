@@ -1,3 +1,6 @@
+# DEMO
+A hosted demo is available at https://sndp-project-management.pages.dev contact author for login creds.
+
 # sndp-project-management
 
 > ⚠️ This repository contains a technical screening project for [VoiceAIWrapper](https://voiceaiwrapper.com).  

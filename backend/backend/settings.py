@@ -184,3 +184,10 @@ GRAPHQL_JWT = {
         days=config("JWT_REFRESH_TOKEN_EXPIRES_DAYS", default=7, cast=int)
     ),
 }
+
+
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost,http://127.0.0.1',
+    cast=Csv()
+)
